@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live QR-Scanner mit Popup</title>
+    <title>Live QR-Scanner mit Popup (Korrigiert)</title>
     <style>
         /* Grundlegende Stile für die Seite */
         body {
@@ -212,13 +212,13 @@
                 // Leer lassen, um Konsolen-Spam zu vermeiden
             }
 
-            const html5QrcodeScanner = new Html5QqrcodeScanner(
+            // KORRIGIERTE ZEILE: Der Tippfehler wurde hier entfernt.
+            const html5QrcodeScanner = new Html5QrcodeScanner(
                 "qr-reader", 
                 { 
                     fps: 15,
                     qrbox: (w, h) => ({ width: Math.min(w, h) * 0.8, height: Math.min(w, h) * 0.8 }),
                     rememberLastUsedCamera: true,
-                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                 }, 
                 false
             );
