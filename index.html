@@ -1,23 +1,126 @@
-<!doctype html>
-<html lang="de">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Willkommen</title>
-  <link rel="stylesheet" href="style.css" />
+    <title>QR-Code-Scanner</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #qr-video-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border: 2px solid black;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #qr-border {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 5px solid transparent;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease-in-out;
+        }
+
+        .highlighted #qr-border {
+            border-color: yellow;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
-  <div class="container">
-    <main class="card">
-      <h1>Willkommen</h1>
-      <p>Wie möchtest du fortfahren?</p>
+    <h1>QR-Code-Scanner</h1>
+    <div id="qr-video-container">
+        <video id="qr-video"></video>
+        <div id="qr-border"></div>
+    </div>
+    <div id="result">Kamera starten, um zu scannen...</div>
+    <button onclick="startScanning()">Kamera starten</button>
 
-      <div class="flex-col" style="gap:1rem;">
-        <a href="login.html" class="btn btn--primary">Anmelden</a>
-        <a href="register.html" class="btn btn--accent">Registrieren</a>
-        <a href="guest.html" class="btn btn--ghost">Als Gast fortfahren</a>
-      </div>
-    </main>
-  </div>
+    <script>
+        let html5QrCode;
+        const qrVideo = document.getElementById('qr-video');
+        const resultDiv = document.getElementById('result');
+        const qrContainer = document.getElementById('qr-video-container');
+
+        const qrCodeConfig = {
+            fps: 10,
+            qrbox: 250,
+            disableFlip: false,
+        };
+
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Code erfolgreich gescannt: ${decodedText}`);
+            resultDiv.innerText = `Gefundener QR-Code: ${decodedText}`;
+            qrContainer.classList.add('highlighted');
+            setTimeout(() => {
+                qrContainer.classList.remove('highlighted');
+            }, 2000);
+            html5QrCode.stop().then(() => {
+                console.log("Scanner gestoppt.");
+            }).catch(err => {
+                console.log("Fehler beim Stoppen des Scanners:", err);
+            });
+        }
+
+        function onScanError(errorMessage) {
+            // Optional: Fehlerbehandlung hier
+        }
+
+        function startScanning() {
+            if (html5QrCode) {
+                html5QrCode.stop().catch(err => console.log(err));
+            }
+            html5QrCode = new Html5Qrcode("qr-video");
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                qrCodeConfig,
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                resultDiv.innerText = "Kamera konnte nicht gestartet werden. Bitte erlaube den Zugriff.";
+                console.error("Fehler beim Starten der Kamera:", err);
+            });
+        }
+    </script>
 </body>
 </html>
