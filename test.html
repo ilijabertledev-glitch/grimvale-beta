@@ -2,54 +2,93 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Live QR-Code Scanner</title>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Scanner</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    video, canvas { width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; }
-    #output { margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 50px; }
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f0f0f0;
+    }
+
+    #qr-reader {
+      width: 400px;
+      max-width: 90%;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      position: relative;
+    }
+
+    #qr-overlay {
+      position: absolute;
+      border: 4px solid yellow;
+      border-radius: 10px;
+      pointer-events: none; /* damit man die Kamera weiterhin bedienen kann */
+      display: none;
+    }
+
+    #result {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #333;
+    }
   </style>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
-  <h1>QR-Code Live-Scanner</h1>
 
-  <video id="video" autoplay></video>
-  <canvas id="canvas" hidden></canvas>
-  <div id="output">Starte Kamera...</div>
+<h2>QR Code Scanner</h2>
+<div id="qr-reader"></div>
+<div id="qr-overlay"></div>
+<div id="result">Kein QR-Code erkannt</div>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const output = document.getElementById('output');
+<script>
+  const overlay = document.getElementById("qr-overlay");
 
-    // Kamera starten
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => {
-        video.srcObject = stream;
-        video.setAttribute("playsinline", true); // iOS Fix
-        video.play();
-        requestAnimationFrame(scan);
-      })
-      .catch(err => {
-        output.textContent = "Fehler beim Zugriff auf Kamera: " + err;
-      });
+  function onScanSuccess(decodedText, decodedResult) {
+    const resultDiv = document.getElementById("result");
+    resultDiv.innerText = `QR Code erkannt: ${decodedText}`;
 
-    function scan() {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-
-        if (code) {
-          output.textContent = "Gefundener Text: " + code.data;
-        }
-      }
-      requestAnimationFrame(scan);
+    // Koordinaten des QR-Codes für Overlay
+    if(decodedResult && decodedResult.resultPoints) {
+      const points = decodedResult.resultPoints;
+      const minX = Math.min(...points.map(p => p.x));
+      const minY = Math.min(...points.map(p => p.y));
+      const maxX = Math.max(...points.map(p => p.x));
+      const maxY = Math.max(...points.map(p => p.y));
+      overlay.style.left = `${minX}px`;
+      overlay.style.top = `${minY}px`;
+      overlay.style.width = `${maxX - minX}px`;
+      overlay.style.height = `${maxY - minY}px`;
+      overlay.style.display = 'block';
     }
-  </script>
+
+    // Overlay nach 1 Sekunde wieder ausblenden
+    setTimeout(() => overlay.style.display = 'none', 1000);
+  }
+
+  function onScanFailure(error) {
+    // Fehler ignorieren
+  }
+
+  let html5QrcodeScanner = new Html5Qrcode("qr-reader");
+  Html5Qrcode.getCameras().then(cameras => {
+    if(cameras && cameras.length) {
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onScanSuccess,
+        onScanFailure
+      );
+    }
+  }).catch(err => console.error(err));
+</script>
+
 </body>
 </html>
