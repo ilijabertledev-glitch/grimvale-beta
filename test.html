@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Live QR-Code Scanner</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    video, canvas { width: 100%; max-width: 400px; border: 1px solid #ccc; border-radius: 8px; }
+    #output { margin-top: 1rem; padding: 1rem; border: 1px solid #ccc; min-height: 50px; }
+  </style>
+</head>
+<body>
+  <h1>QR-Code Live-Scanner</h1>
+
+  <video id="video" autoplay></video>
+  <canvas id="canvas" hidden></canvas>
+  <div id="output">Starte Kamera...</div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const output = document.getElementById('output');
+
+    // Kamera starten
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true); // iOS Fix
+        video.play();
+        requestAnimationFrame(scan);
+      })
+      .catch(err => {
+        output.textContent = "Fehler beim Zugriff auf Kamera: " + err;
+      });
+
+    function scan() {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+
+        if (code) {
+          output.textContent = "Gefundener Text: " + code.data;
+        }
+      }
+      requestAnimationFrame(scan);
+    }
+  </script>
+</body>
+</html>
