@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live QR-Code-Scanner</title>
+    <title>Live QR-Scanner mit Popup</title>
     <style>
         /* Grundlegende Stile für die Seite */
         body {
@@ -16,6 +16,7 @@
             margin: 0;
             background-color: #2c3e50; /* Dunkelblauer Hintergrund */
             color: #ecf0f1; /* Helle Schriftfarbe */
+            overflow: hidden; /* Verhindert Scrollen, wenn das Popup offen ist */
         }
 
         h1 {
@@ -33,10 +34,9 @@
             background-color: #34495e;
         }
 
-        /* Element, in das die Bibliothek das Video rendert */
         #qr-reader {
             width: 100%;
-            border: none; /* Entfernt den Standardrahmen der Bibliothek */
+            border: none;
         }
 
         /* Überlagerung für den animierten Rahmen */
@@ -45,35 +45,101 @@
             box-sizing: border-box;
             border: 4px solid #f1c40f; /* Leuchtendes Gelb */
             box-shadow: 0 0 25px #f1c40f, inset 0 0 25px #f1c40f;
-            display: none; /* Standardmäßig ausgeblendet */
-            pointer-events: none; /* Stellt sicher, dass die Überlagerung nicht klickbar ist */
+            display: none;
+            pointer-events: none;
             border-radius: 8px;
             animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         /* CSS-Animation für den pulsierenden Effekt */
         @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 0.7;
-            }
-            50% {
-                transform: scale(1.05);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0.7;
-            }
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+
+        /* Stile für das Popup/Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 1000;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 25px 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.visible .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+            color: #3498db;
+        }
+
+        .modal-body {
+            margin: 20px 0;
+            font-size: 1.1em;
+            word-wrap: break-word; /* Bricht lange Links oder Texte um */
+        }
+
+        .modal-close-btn {
+            display: inline-block;
+            padding: 10px 25px;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        .modal-close-btn:hover {
+            background-color: #2980b9;
         }
     </style>
 </head>
 <body>
 
-    <h1>Live QR-Code-Scanner 🚀</h1>
+    <h1>Live QR-Scanner mit Popup 🚀</h1>
     <div id="qr-reader-container">
         <div id="qr-reader"></div>
         <div id="qr-box-overlay"></div>
+    </div>
+
+    <div id="qr-popup" class="modal-overlay">
+        <div class="modal-content">
+            <h2>QR-Code erkannt!</h2>
+            <div id="popup-content" class="modal-body"></div>
+            <button id="popup-close" class="modal-close-btn">Schließen</button>
+        </div>
     </div>
 
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -82,11 +148,27 @@
         document.addEventListener('DOMContentLoaded', () => {
             const qrReaderElement = document.getElementById('qr-reader');
             const qrBoxOverlay = document.getElementById('qr-box-overlay');
-            
-            let lastScanTime = 0;
-            const cooldown = 1000; // 1 Sekunde Cooldown zwischen den Scans
+            const popup = document.getElementById('qr-popup');
+            const popupContent = document.getElementById('popup-content');
+            const popupCloseBtn = document.getElementById('popup-close');
 
-            // Diese Funktion wird aufgerufen, wenn ein QR-Code erfolgreich erkannt wird
+            let lastScanTime = 0;
+            const cooldown = 3000; // 3 Sekunden Cooldown, um Popups zu vermeiden
+
+            // Funktion zum Anzeigen des Popups
+            function showPopup(content) {
+                popupContent.textContent = content;
+                popup.classList.add('visible');
+            }
+
+            // Funktion zum Schließen des Popups
+            function closePopup() {
+                popup.classList.remove('visible');
+            }
+
+            popupCloseBtn.addEventListener('click', closePopup);
+
+            // Funktion wird bei erfolgreichem Scan aufgerufen
             function onScanSuccess(decodedText, decodedResult) {
                 const now = Date.now();
                 if (now - lastScanTime < cooldown) {
@@ -95,16 +177,13 @@
                 lastScanTime = now;
 
                 console.log(`Gescannter Code: ${decodedText}`);
-                alert(`Erkannter QR-Code:\n${decodedText}`);
+                showPopup(decodedText); // Zeigt das Popup mit dem Inhalt
 
-                // Die Bibliothek liefert Koordinaten des erkannten Codes
                 if (decodedResult.result && decodedResult.result.points) {
                     const points = decodedResult.result.points;
                     const video = qrReaderElement.querySelector('video');
-
                     if (!video) return;
 
-                    // Finde die min/max Koordinaten, um ein Rechteck zu bilden
                     const xCoords = points.map(p => p.x);
                     const yCoords = points.map(p => p.y);
                     const xMin = Math.min(...xCoords);
@@ -115,50 +194,40 @@
                     const containerRect = qrReaderElement.getBoundingClientRect();
                     const videoRect = video.getBoundingClientRect();
 
-                    // Berechne die Skalierung, da die Videoauflösung und die Anzeigegröße abweichen können
                     const scaleX = videoRect.width / video.videoWidth;
                     const scaleY = videoRect.height / video.videoHeight;
                     
-                    // Berechne die Position des Videostreams innerhalb des Containers
                     const videoOffsetX = videoRect.left - containerRect.left;
                     const videoOffsetY = videoRect.top - containerRect.top;
 
-                    // Positioniere und skaliere den gelben Rahmen genau über dem QR-Code
                     qrBoxOverlay.style.left = `${(xMin * scaleX) + videoOffsetX}px`;
                     qrBoxOverlay.style.top = `${(yMin * scaleY) + videoOffsetY}px`;
                     qrBoxOverlay.style.width = `${(xMax - xMin) * scaleX}px`;
                     qrBoxOverlay.style.height = `${(yMax - yMin) * scaleY}px`;
-                    
-                    // Mache den Rahmen sichtbar
                     qrBoxOverlay.style.display = 'block';
                 }
             }
 
-            // Diese Funktion wird bei jedem Frame aufgerufen, in dem kein QR-Code gefunden wird.
             function onScanFailure(error) {
                 // Leer lassen, um Konsolen-Spam zu vermeiden
             }
 
-            // Initialisierung und Konfiguration des Scanners
-            const html5QrcodeScanner = new Html5QrcodeScanner(
+            const html5QrcodeScanner = new Html5QqrcodeScanner(
                 "qr-reader", 
                 { 
-                    fps: 15, // Frames pro Sekunde für das Scannen
-                    qrbox: (viewfinderWidth, viewfinderHeight) => {
-                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                        return { width: minEdge * 0.8, height: minEdge * 0.8 }; // Scanbereich ist 80% des Viewports
-                    },
-                    rememberLastUsedCamera: true, // Erinnert sich an die Kameraauswahl
-                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] // Erzwingt die Kameranutzung
+                    fps: 15,
+                    qrbox: (w, h) => ({ width: Math.min(w, h) * 0.8, height: Math.min(w, h) * 0.8 }),
+                    rememberLastUsedCamera: true,
+                    supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
                 }, 
-                /* verbose= */ false
+                false
             );
             
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
-            // Verstecke den Rahmen wieder, wenn eine Zeit lang nichts gescannt wurde
+            // Versteckt den Rahmen wieder, wenn eine Zeit lang nichts gescannt wurde
             setInterval(() => {
-                if (Date.now() - lastScanTime > cooldown) {
+                if (Date.now() - lastScanTime > cooldown - 500) {
                     qrBoxOverlay.style.display = 'none';
                 }
             }, 500);
